@@ -1,0 +1,34 @@
+name: TGP3
+channels:
+  - conda-forge
+  - defaults
+
+dependencies:
+  - python=3.10
+  - pip
+  - numpy
+  - pandas
+  - scipy
+  - scikit-learn
+  - matplotlib
+  - seaborn
+  - cython
+  - tqdm
+  - ipykernel
+  - optuna
+  - shap
+  - missingno
+  - psutil
+
+  # GPU-enabled XGBoost（官方提供）
+  - xgboost=2.0.*
+
+  # GPU-enabled CatBoost（官方提供）
+  - catboost=1.2.*
+
+  # pip 为 LightGBM 安装 GPU 支持
+  - pip:
+      - lightgbm  # pip 版本支持 GPU
+      - optuna-integration[lightgbm,xgboost]
+      - pandas-profiling
+      - watermark
