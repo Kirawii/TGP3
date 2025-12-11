@@ -564,11 +564,10 @@ P_{\text{avg}} = \frac{1}{N_{\text{models}}} \sum_{i=1}^{N_{\text{models}}} P_i
 
 \begin{itemize}
     \item \textbf{数据划分}：我们将包含 80 万条记录的完整数据集，按照 80\%:20\% 的比例，通过分层随机抽样 (Stratified Random Sampling) 的方式划分为训练集（640,000 条记录）和验证集（160,000 条记录）。分层抽样保证了在训练集和验证集中，目标变量 \texttt{isDefault} 的正负样本比例与原始数据集保持一致，这对于处理类别不平衡问题至关重要。训练集用于模型的所有学习过程（包括特征选择、参数调优和训练），而验证集则作为“未见过”的数据，专门用于评估模型的最终泛化能力。
-    \item \textbf{评估指标}：我们采用以下两个业界公认的核心指标来综合评估模型的性能：
+    \item \textbf{评估指标}：我们采用业界公认的核心指标来综合评估模型的性能：
     \begin{itemize}
         \item \textbf{AUC (Area Under the ROC Curve)}：AUC 衡量的是模型将正样本排在负样本前面的概率。其值在 0.5 到 1 之间，越接近 1，表示模型的区分能力越强。AUC 对样本类别是否平衡不敏感，是评估模型排序能力的首选指标。
-        \item \textbf{KS (Kolmogorov-Smirnov) 值}：KS 值是好坏样本累计分布差值的最大值，能够直观地反映模型对风险的区分度。KS 值越大，表明模型区分好坏客户的能力越强。在金融风控领域，KS 值通常被认为是一个非常重要的业务指标，一般认为 KS > 0.3 即代表模型有较好的预测能力。
-    \end{itemize}
+         \end{itemize}
 \end{itemize}
 
 \subsection{模型性能评估}
