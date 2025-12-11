@@ -43,38 +43,20 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % 关键词 摘要 首页脚注      
 %%%%%%%%关键词
-\Keyword{信贷风控；违约预测；特征工程；梯度提升树；模型融合；Stacking}  
+\Keyword{信贷风控；违约预测；特征工程；梯度提升树；模型融合；Stacking；SHAP}  
 
 
 \maketitle
 
 %%%%%%%%摘要
 \begin{empAbstract}
-在普惠金融加速发展的背景下，个人信贷业务快速增长，违约风险问题日益突出，亟需高效精准的风险预测模型。本文提出一套融合深度特征工程与多模型集成的端到端预测框架。通过系统预处理与多维特征构建，重点引入群体统计量与三阶共现特征刻画个体差异；建模阶段，采用 LightGBM 进行特征筛选，并基于 Optuna 优化 XGBoost、LightGBM 和 CatBoost 三个 GBDT 模型，最终以逻辑回归为元模型实现 Stacking 融合。实验证明，融合模型在验证集上 AUC 达 0.7400，天池排行榜排名第 48，显著优于单一模型。研究验证了特征构建与模型融合在信贷风控中的关键价值，具备良好应用前景。 
+在普惠金融加速发展的背景下，个人信贷业务快速增长，违约风险问题日益突出，亟需高效精准的风险预测模型。本文提出一套融合深度特征工程与多模型集成的端到端违约风险预测框架。通过系统预处理与多维特征构建，重点引入群体统计量与高阶共现特征刻画个体差异；建模阶段，采用 LightGBM 进行特征筛选，并基于 Optuna 对 XGBoost、LightGBM 和 CatBoost 三个 GBDT 模型进行超参数优化，以逻辑回归为元模型构建 Stacking 融合，同时引入传统 Logistic Regression 作为对照基线模型，以评估非线性集成模型的增益。进一步地，本文利用 SHAP 值对三个基学习器进行全局特征贡献分析，从信用等级、时间特征以及目标编码特征等维度解释模型的决策依据。实验结果表明，融合模型在本地验证集上的 AUC 达到 0.7532，显著优于单一 GBDT 模型（约 0.745）及 Logistic Regression 基线模型（约 0.727）;在天池平台线上提交中取得约 0.7400 的 AUC 成绩。研究验证了特征构建、模型融合与可解释性分析在信贷风控中的关键价值，具备良好的工程应用前景。
 \end{empAbstract}
 
-% %%%%%%%%英文标题、作者、摘要、关键词
-% \KeywordEn{credit risk modeling; def ault prediction; feature engineering; gradient boosting decision trees; model ensembling; Stacking}
-% \emptitleEn{A Study on Personal Credit Default Risk Prediction Based on Multi-Model Ensemble Learning}
-% \empauthorEn{Tongkai Xu}{Jing Huang}{Zhenbang Wei}
-
-% \begin{empAbstractEn}
-% The rapid expansion of personal credit, driven by inclusive finance, has brought heightened attention to default risk, necessitating efficient risk prediction models. This paper introduces an end-to-end framework that merges deep feature engineering with a multi-model ensemble. The process involves systematic preprocessing and multi-dimensional feature construction, with a particular focus on integrating group statistics and third-order co-occurrence features. For modeling, LightGBM is used for feature selection, followed by Optuna-optimized XGBoost, LightGBM, and CatBoost models, which are then combined using a Stacking ensemble with logistic regression as the meta-model. Experimental results demonstrate that this integrated approach significantly outperforms single models, achieving an AUC of 0.7404 on the validation set and ranking 37th on the Tianchi Leaderboard as of June 8, 2025, thereby underscoring the critical value and promising application prospects of advanced feature construction and model fusion in credit risk control.
-
-% \end{empAbstractEn}
-
-%%%%%%%%首页角注，依次为实验时间、报告时间、学号、email
-
-
-
-%%%%%%%%！首页角注可能与正文重叠，请通过调整正文中第一页的\enlargethispage{-3.3cm}位置手动校准正文底部位置：
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%  正文由此开始
 \wuhao 
-%  分栏开始
 
 \section{引~~言}
-\enlargethispage{-3.3cm}
+% \enlargethispage{-3.3cm}
 \subsection{研究背景与意义}
 近年来，随着数字技术与金融服务的深度融合，普惠金融 (Inclusive Finance) 在全球范围内以前所未有的速度加速发展。作为其核心业务之一，个人信贷服务极大地拓宽了金融服务的覆盖面，为个人消费者和小型企业主提供了重要的资金支持，有效促进了消费升级和实体经济的活力。然而，业务规模的迅速扩张也伴随着信用风险的显著增加。个人信贷违约事件不仅会给放贷机构带来直接的经济损失，还可能引发连锁反应，影响金融市场的稳定。因此，建立一套科学、精准、高效的个人信贷违约风险预测体系，已成为金融机构风险管理部门乃至整个金融行业亟待解决的核心问题。
 
@@ -88,13 +70,15 @@
 然而，先进的模型并不能自动保证最佳的结果。现代机器学习研究的共识是“数据和特征决定了机器学习的上限，而模型和算法只是逼近这个上限而已” \citep{ng2016nutshell}。因此，特征工程，即从原始数据中创造出对模型有价值的输入变量，被认为是提升模型性能的关键。同时，为了进一步突破单一模型的性能瓶颈，模型融合 (Model Ensembling) 技术，特别是 Stacking 堆叠融合 \citep{wolpert1992stacked}，被证明是行之有效的策略。它通过训练一个“元模型”来智能地组合多个基模型的预测，从而获得比任何单一模型都更好的泛化能力。
 
 \subsection{本文主要工作与贡献}
+
 尽管已有大量研究将机器学习应用于信贷风控，但如何系统性地结合深度特征工程、自动化模型优化与高级模型融合策略，构建一个端到端的、可复现的高性能建模框架，仍是值得深入探索的方向。基于此，本文的主要工作与贡献如下：
 
 \begin{itemize}
-    \item 构建了多维度的深度特征工程体系：本文不仅处理了基础特征，还重点设计并实现了高阶交叉特征，特别是群体统计特征（如均值、标准差、分位数等）和多阶共现次数特征，旨在从数据的交互中捕捉更深层次的、具有业务含义的风险模式。
-    \item 实践了科学的模型优化流程：本文采用基于 XGBoost 特征重要性的过滤法进行了高效的特征选择，并引入 Optuna 自动化调优框架，对 XGBoost、LightGBM、CatBoost 三个模型的超参数进行了系统性的贝叶斯优化，以寻求其最佳性能。
-    \item 实现了有效的模型融合策略：本文对比了简单平均融合与基于逻辑回归元模型的 Stacking 堆叠融合两种策略。实验证明，Stacking 融合能够智能地组合不同基模型的优势，取得了最佳的预测性能。
-    \item 提供了可复现的高性能基线：本文提出的端到端建模框架，在公开数据集上取得了 AUC 0.7400 的优异成绩，并获得了天池排行榜第 48 名（截至特定日期）的排名，为相关领域的研究和实践提供了强有力的性能基准和方法论参考。
+    \item 构建了多维度的深度特征工程体系：本文不仅处理了基础特征，还重点设计并实现了高阶交叉特征，特别是群体统计特征（如均值、标准差、分位数等）和多阶共现次数特征，旨在从数据的交互中捕捉更深层次、具有业务含义的风险模式。
+    \item 实践了科学的模型优化流程：采用基于 XGBoost 特征重要性的过滤法进行了高效的特征选择，并引入 Optuna 自动化调优框架，对 XGBoost、LightGBM、CatBoost 三个 GBDT 模型的超参数进行了系统性的贝叶斯优化，以充分挖掘各自的性能上限。
+    \item 设计了多模型融合与对照实验体系：在三个 GBDT 基模型的基础上，构建了简单平均和 Stacking 两种融合策略，以逻辑回归作为元模型对基学习器输出进行二次建模；同时引入传统 Logistic Regression 作为基线模型，在相同特征与评估框架下进行对照实验，量化非线性集成模型带来的性能提升。
+    \item 开展了基于 SHAP 的可解释性分析：分别对 XGBoost、LightGBM 与 CatBoost 进行 SHAP 特征贡献分析，从信用等级、时间维度、目标编码特征以及匿名行为特征等角度给出模型决策的可视化解释，为金融风控场景下的模型落地提供了支持。
+    \item 提供了可复现的高性能基线：本文提出的端到端建模框架，在本地验证集上取得了 0.7532 的 AUC，在公开竞赛平台上获得约 0.7400 的线上成绩，为相关领域的研究和实践提供了强有力的性能基准和方法论参考。
 \end{itemize}
 
 \section{实验准备}
@@ -614,6 +598,30 @@ Stacking 融合 & 0.753210 \\ \hline
     \item \textbf{竞赛排名参考}：以 0.7400 的 AUC 分数参考天池平台类似赛题的历史排名，该性能通常足以进入前 0.1\%，证明了我们整个数据处理、特征工程和建模流程的有效性。
 \end{itemize}
 
+\subsection{其他典型模型的对比实验}
+
+为了进一步验证梯度提升类模型的优势是否来自于其非线性表达能力，而非仅仅由于参数规模更大或训练策略更复杂，本文额外选择了传统线性分类模型 Logistic Regression 作为对照基线模型。该模型与前述 XGBoost、LightGBM 与 CatBoost 一样，均使用相同的 340 维最优特征，并采用 5 折交叉验证结合多个随机种子的方式进行训练，以确保评估结果的可比性。
+
+图~\ref{fig:model_auc_compare} 展示了包括 Logistic Regression 在内的六种模型（四个单模型与两种融合策略）的验证集 AUC 对比。
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.75\textwidth]{image/model_auc_compare.png}
+    \caption{不同模型在验证集上的 AUC 性能对比}
+    \label{fig:model_auc_compare}
+\end{figure}
+
+从图中可以看到，Logistic Regression 的平均 AUC 为约 $0.7273$，明显低于三个梯度提升类基模型约 $0.745$ 的性能，也显著弱于简单平均融合与最终的 Stacking 融合模型。这一结果表明：
+
+\begin{itemize}
+    \item \textbf{线性模型无法充分捕捉违约风险中的非线性结构}：即使在精心构造的统计特征与交叉特征加持下，Logistic Regression 仍难以拟合复杂的风险模式。
+    \item \textbf{GBDT 类模型具备显著的表达优势}：XGBoost、LightGBM 与 CatBoost 在相同特征空间下均取得更高的 AUC，说明数据中的关键模式具有高度非线性的特征。
+    \item \textbf{融合策略进一步提高泛化能力}：简单平均融合已经超越所有单模型，而 Stacking 融合更是达到最高 AUC，验证了模型多样性带来的性能增益。
+\end{itemize}
+
+综上所述，引入 Logistic Regression 作为基线模型不仅提供了重要的性能参照，也进一步强化了本文提出的 GBDT+融合策略在结构化信用风险预测任务中的有效性与必要性。
+
+
 \subsection{特征重要性分析}
 
 为了理解模型决策的主要依据，并验证我们特征工程的有效性，我们分析了最终集成模型中所有特征的平均重要性。重要性基于“增益”(Gain)进行计算，即每个特征在所有树中作为分裂节点时，为模型带来的平均性能提升。图 \ref{fig:feature_importance} 展示了贡献度排名前 30 的特征。
@@ -637,37 +645,85 @@ Stacking 融合 & 0.753210 \\ \hline
 综上所述，特征重要性分析不仅验证了我们特征工程策略的成功，也揭示了模型决策逻辑与金融风控的业务直觉高度吻合。
 
 
+\subsection{基于 SHAP 的特征重要性分析}
+
+为进一步理解模型的决策机理，本文分别对 XGBoost、LightGBM 与 CatBoost 三个基学习器进行了 SHAP（SHapley Additive exPlanations）分析。SHAP 从博弈论视角刻画特征对预测结果的边际贡献，其 Summary Plot 不仅给出了特征的重要性排序，还描述了特征取值由低到高时对预测概率的影响方向。
+
+\begin{figure}[htbp]
+    \centering
+    % 注意将文件名替换为你实际保存图片的路径
+    \begin{subfigure}{0.32\textwidth}
+        \centering
+        \includegraphics[width=\linewidth]{image/XGBoost.png}
+        \caption{XGBoost 模型}
+        \label{fig:shap_xgb}
+    \end{subfigure}
+    \hfill
+    \begin{subfigure}{0.32\textwidth}
+        \centering
+        \includegraphics[width=\linewidth]{image/LightGBM.png}
+        \caption{LightGBM 模型}
+        \label{fig:shap_lgb}
+    \end{subfigure}
+    \hfill
+    \begin{subfigure}{0.32\textwidth}
+        \centering
+        \includegraphics[width=\linewidth]{image/CatBoost.png}
+        \caption{CatBoost 模型}
+        \label{fig:shap_cat}
+    \end{subfigure}
+    \caption{不同模型的 SHAP 特征重要性对比图}
+    \label{fig:shap_compare}
+\end{figure}
+
+从图~\ref{fig:shap_compare} 可以看出，三种模型在特征重要性排序上具有较高的一致性，说明本文构造的特征在不同模型下都表现出稳定的风险区分能力。
+
+首先，\texttt{subGrade} 和 \texttt{grade} 这两个信用等级相关特征在 XGBoost 与 LightGBM 中均处于最前列，在 CatBoost 中同样位居前几位，说明传统信用评分信息仍然是判别违约风险的核心依据。其 SHAP 分布呈现出明显的单调性：信用等级越差（特征值越高），对应的 SHAP 值越偏正，意味着模型更倾向于预测该样本违约。
+
+其次，时间特征 \texttt{issueDate\_day} 在三个模型中均具有较高的重要性，其中在 LightGBM 与 CatBoost 中的排名尤其靠前。这说明借款发放时间隐含了一定的风险周期性或政策差异，例如特定时间段内放款的用户整体资质偏弱，对应的 SHAP 值呈现出红色高值并推动预测概率上升。
+
+再次，基于目标编码构造的高基数类别特征，如 \texttt{employmentTitle\_target\_mean}、\texttt{postCode\_target\_mean} 与 \texttt{regionCode\_target\_mean} 等，在三种模型的前二十个特征中均频繁出现，表明目标编码有效提炼了职业、地区等离散变量中的违约率差异，使模型能够区分出不同人群的风险水平。
+
+此外，一些匿名特征及其统计派生特征（例如 \texttt{n9}、\texttt{n14}、\texttt{subGrade\_term\_count}、\texttt{term\_dti\_mean} 等）在各模型中也具有较高的重要性。它们的 SHAP 点云呈现明显的离散分布，说明这些特征捕捉到了较复杂的非线性模式，例如不同还款期限与负债水平组合下的违约行为差异。
+
+最后，CatBoost 相比 XGBoost 与 LightGBM 对部分收入与负债相关的派生特征（如 \texttt{loan\_to\_income\_ratio}、\texttt{unused\_revol\_credit}、\texttt{monthly\_debt\_to\_income} 等）赋予了略高的 SHAP 权重，这与 CatBoost 对类别特征与数值特征联合建模的能力较强有关。从整体上看，三种模型在前若干重要特征上的高度重合，一方面验证了特征工程的有效性，另一方面也提高了模型融合结果在业务解释上的可信度。
+
+
+
 \section{模型不足与未来改进}
-尽管本文所构建的多模型融合框架在公开数据集上取得了较为优异的预测表现，并在天池平台取得了靠前的排行榜成绩，但从严谨的风控建模视角来看，仍存在若干值得反思和改进的方面。
+
+尽管本文构建的多模型融合框架在公开数据集上取得了优良的预测表现，但从金融风控的严谨性与工程化要求来看，仍存在若干值得进一步优化的方面。
 
 \subsection{模型与数据层面的不足}
 
-首先，\textbf{数据来源与场景的局限性} 仍然较为明显。本文所使用的数据集来自单一的公开竞赛平台，样本结构、客户群体和业务规则均与真实金融机构的全量客户群存在差异。例如，部分特征经过了匿名化处理，缺失了原始业务含义，这在一定程度上限制了特征工程的上限。同时，数据并未严格按照时间顺序进行划分，验证集更多反映的是“静态截面上的泛化能力”，而非模型在真实时间滚动场景下的稳定性。
+首先，数据来源具有一定局限性。本文使用的数据集来自公开竞赛平台，样本结构和业务环境与真实金融机构的客户特征并不完全一致。此外，部分特征经过匿名化处理，缺乏明确的业务含义，这在一定程度上限制了特征工程的深度。
 
-其次，\textbf{特征工程仍以人工设计为主}。本文虽然构造了多层次的统计聚合特征与交叉计数特征，并引入了目标编码等高级特征工程手段，但整体上仍依赖于人工经验与启发式设计。对于高维匿名特征，尚未系统性地引入自动特征构建（如基于表示学习的自动编码器、TabTransformer 等）来挖掘潜在结构信息。
+其次，特征工程仍以人工构造为主。虽然本文设计了多层次的统计特征与交叉特征，但整体流程仍高度依赖专家经验，对于匿名变量的潜在结构尚未充分挖掘。
 
-第三，\textbf{模型族群存在一定的同质性}。本文选取的三种基模型均属于 GBDT 家族（XGBoost、LightGBM、CatBoost），虽然在实现细节与树结构上存在差异，但本质上仍是基于梯度提升的加法树模型。这意味着模型在偏差-方差结构上仍存在较强相关性，Stacking 虽然提升了整体性能，但模型融合的“多样性红利”尚未被完全挖掘。
+第三，模型族群同质性较高。本文的三个基模型均属于梯度提升树（GBDT）类模型，虽在实现细节上存在差异，但整体学习机制相近，导致融合模型的“多样性红利”未被最大化利用。
 
-此外，\textbf{评价指标与业务视角的结合仍然有限}。当前实验主要围绕 AUC 展开，虽然从排名和学术角度具有较强说服力，但尚未引入成本敏感（Cost-sensitive）的指标体系，也未结合分层定价、额度调整、策略模拟等业务场景评估模型在真实风控策略中的综合收益。
+此外，模型评估主要聚焦于 AUC，尚未结合成本敏感指标，对不同违约成本、催收成本、收益约束等业务场景缺乏系统性度量。
 
 \subsection{未来改进方向}
 
-针对上述不足，未来的研究和实践工作可以从以下几个方向进行扩展与深化：
+未来研究可以从以下方面进一步扩展：
 
 \begin{itemize}
-    \item \textbf{引入多源异构数据与时间序列特征}：在真实业务场景中，可进一步融合多渠道行为数据（如交易流水、设备指纹、登录行为日志等）、外部征信数据以及宏观经济指标，并显式构建时序特征（如行为序列、滚动窗口统计量），以刻画客户动态风险演化过程。
-    \item \textbf{结合表示学习的自动化特征工程}：在现有人工特征体系的基础上，引入基于深度学习的特征自动学习方法，例如针对表格数据的 TabNet、TabTransformer，或基于自编码器 (AutoEncoder) 的低维表示，以缓解人工特征设计的瓶颈，并为 GBDT 模型提供更高质量的输入表示。
-    \item \textbf{提升模型族群的多样性}：在保留 GBDT 模型作为核心基线的同时，可尝试引入如带注意力机制的深度神经网络、图神经网络 (GNN)（例如在用户关系网络或共同设备网络上建模）等结构显著不同的模型，构建“异构模型融合”框架，从而进一步提升 Stacking 的集成收益。
-    \item \textbf{引入成本敏感与约束优化目标}：在当前以 AUC 为主的优化目标之外，未来可以将坏账损失、催收成本、资金占用收益等业务指标纳入统一的优化框架，通过代价敏感学习、阈值调节或多目标优化等方式，使模型输出更直接地服务于资产组合优化与风险收益权衡。
-    \item \textbf{加强模型解释与稳定性分析}：在现有特征重要性分析的基础上，可系统性引入 SHAP 等模型解释工具，对不同客群、不同时间窗口的特征贡献进行对比分析，识别模型潜在的偏差来源。同时，可通过时间滚动验证 (Rolling Window Validation)、对抗验证 (Adversarial Validation) 等方法，评估模型在分布漂移 (Data Drift) 情况下的鲁棒性。
-    \item \textbf{面向生产环境的工程化部署与监控}：未来工作还可以进一步考虑模型在真实业务系统中的部署形态，包括在线/离线推理架构、特征计算链路、模型版本管理与灰度发布策略等，并设计完善的监控指标（如实时 PSI、AUC 监控、坏账率偏离度），构建闭环的“数据—模型—策略—反馈”迭代体系。
+    \item \textbf{引入多源异构数据与时间序列特征}：结合真实业务中的行为序列、外部征信数据、设备指纹及宏观经济指标，构建更贴近风控场景的动态风险刻画方式。
+    \item \textbf{自动化特征学习方法}：利用 TabNet、TabTransformer、AutoEncoder 等深度模型对高维匿名特征进行表示学习，以弥补人工特征工程的不足。
+    \item \textbf{构建更具多样性的融合框架}：在 GBDT 模型之外引入如深度神经网络、图神经网络等结构异构模型，提升 Stacking 融合的收益。
+    \item \textbf{成本敏感与约束优化目标}：将坏账损失、催收成本、资金占用收益等纳入统一优化目标，使模型更直接服务于风险收益权衡。
+    \item \textbf{工程化部署与监控体系}：包括特征计算链路、模型版本管理、实时监控指标（如 PSI、坏账率偏移等），构建闭环的线上迭代体系。
 \end{itemize}
-
-总体而言，本文提出的多模型融合框架可以视作一个兼具性能与可复现性的基线方案。在此基础上，结合更多真实业务数据、引入更丰富的建模范式与评价维度，将有望进一步提升个人信贷违约预测模型在实际金融场景中的应用价值。
 
 
 \section{结~论}
-本项目围绕信贷风控预测任务，成功构建并优化了一个高性能的机器学习模型。通过系统化的数据预处理、多层次的特征工程、科学的特征选择、精细的超参数调优以及先进的模型融合策略，我们最终的 Stacking 集成模型在独立的验证集上取得了 0.7400 的 AUC，相较于任何单一基模型均有显著提升，展现了卓越的风险区分能力。
+
+本项目围绕个人信贷违约风险预测任务，构建并系统优化了一套融合深度特征工程与多模型集成的端到端建模框架。通过规范的数据预处理、多层次的统计与交叉特征构造、基于 XGBoost 的特征选择以及 Optuna 驱动的超参数调优，我们在相同特征空间下系统评估了 XGBoost、LightGBM、CatBoost 和 Logistic Regression 等多种典型模型的表现。实验结果表明，三个 GBDT 基模型的验证集 AUC 均在 0.745 左右，明显优于 Logistic Regression 基线模型约 0.727 的性能；在此基础上构建的 Stacking 融合模型进一步将验证集 AUC 提升至 0.7532，显著超过任一单模型，并在天池平台线上提交中取得约 0.7400 的 AUC，展现出良好的泛化能力和工程应用潜力。
+
+在模型可解释性方面，本文利用 SHAP 方法对 XGBoost、LightGBM 与 CatBoost 的特征贡献进行了细致分析。结果表明，信用等级相关特征（\texttt{grade}、\texttt{subGrade}）、发放时间特征（\texttt{issueDate\_day}）以及基于目标编码构造的职业、地区等类别变量，是驱动模型决策的关键因素；部分匿名行为特征及其聚合统计也捕捉到了复杂的非线性风险模式。这些发现一方面验证了特征工程设计的有效性，另一方面也为金融机构在授信策略与客群管理上的业务决策提供了可解释的依据。
+
+总体而言，本文工作表明：在结构化信贷数据场景下，结合高质量特征工程、梯度提升树家族模型以及 Stacking 融合策略，可以在兼顾可解释性的前提下显著提升违约预测性能。未来的研究可以在多源异构数据引入、更丰富的模型族群以及成本敏感学习等方向进一步扩展，以构建更贴近实际业务需求的智能风控体系。
 
 
 \renewcommand\refname{\heiti\wuhao\centerline{参考文献}\global\def\refname{参考文献}}
