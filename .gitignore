@@ -42,7 +42,9 @@ ENV/
 *.swo
 *~
 
-# 数据集（如果不想提交大文件）
-# 数据集/
+# 数据集
 notebook文件/data/
-
+notebook文件/data_processed/
+notebook文件/data.tar.gz
+notebook文件/data_processed.tar.gz
+notebook文件/submission_stacking_tuned.csv
