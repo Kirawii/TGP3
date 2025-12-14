@@ -265,7 +265,7 @@
 \fancypagestyle{plain}{ \fancyhf{}\vspace{6pt}
 \lhead{}
 \chead{\vspace{0.4cm}\centering{{\heiti\xiaowuhao 西\ 南\ 财\ 经\ 大\ 学\ 数 \ 据 \ 挖 \ 掘}\\[-0.5ex]
-{{\xiaowuhao Foundations of FinTech, SWUFE}}}}
+{{\xiaowuhao Data Dig, SWUFE}}}}
 \rhead{}
 \lfoot{}
 \cfoot{}
