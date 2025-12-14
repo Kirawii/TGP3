@@ -50,7 +50,7 @@
 
 %%%%%%%%摘要
 \begin{empAbstract}
-在普惠金融加速发展的背景下，个人信贷业务快速增长，违约风险问题日益突出，亟需高效精准的风险预测模型。本文提出一套融合深度特征工程与多模型集成的端到端违约风险预测框架。通过系统预处理与多维特征构建，重点引入群体统计量与高阶共现特征刻画个体差异；建模阶段，采用 LightGBM 进行特征筛选，并基于 Optuna 对 XGBoost、LightGBM 和 CatBoost 三个 GBDT 模型进行超参数优化，以逻辑回归为元模型构建 Stacking 融合，同时引入传统 Logistic Regression 作为对照基线模型，以评估非线性集成模型的增益。进一步地，本文利用 SHAP 值对三个基学习器进行全局特征贡献分析，从信用等级、时间特征以及目标编码特征等维度解释模型的决策依据。实验结果表明，融合模型在本地验证集上的 AUC 达到 0.7532，显著优于单一 GBDT 模型（约 0.745）及 Logistic Regression 基线模型（约 0.727）;在天池平台线上提交中取得约 0.7400 的 AUC 成绩。研究验证了特征构建、模型融合与可解释性分析在信贷风控中的关键价值，具备良好的工程应用前景。
+本文提出一套融合深度特征工程与多模型集成的端到端违约风险预测框架。通过系统预处理与多维特征构建，重点引入群体统计量与高阶共现特征刻画个体差异。并基于 Optuna 对多个 GBDT 模型进行超参数优化，以逻辑回归为元模型构建 Stacking 融合，同时引入单 Logistic Regression 作为对照基线。本文还利用 SHAP 值对三个基学习器进行全局特征贡献分析，从信用等级、时间特征以及目标编码特征等维度解释模型的决策依据。实验结果表明，融合模型在本地验证集上的 AUC 达到 0.7532，显著优于单一 GBDT 模型（约 0.745）及基线模型（约 0.727）;在天池平台线上提交中取得约 0.7400 的 AUC 成绩，在25805只团队中排名第48名。
 \end{empAbstract}
 
 \wuhao 
@@ -85,7 +85,7 @@
 \subsection{数据初步分析与预处理}
 \label{subsec:data_analysis_preprocessing}
 
-本研究的数据分析与建模工作首先开展了系统性的探索性数据分析（Exploratory Data Analysis, EDA）与规范化的数据预处理操作，旨在深入理解变量内涵及其统计分布特征，识别并纠正缺失、异常与格式不一致等数据质量问题，从而构建一个结构完备、语义明确、可供模型直接调用的高质量数据集，为后续特征工程与建模优化提供坚实的数据基础。
+本研究的数据分析与建模工作首先开展了系统性的探索性数据分析与规范化的数据预处理操作，旨在深入理解变量内涵及其统计分布特征，识别并纠正缺失、异常与格式不一致等数据质量问题，从而构建一个结构完备、语义明确、可供模型直接调用的高质量数据集，为后续特征工程与建模优化提供坚实的数据基础。
 
 \subsubsection{数据集概览与变量解析}
 
@@ -110,13 +110,37 @@
 \end{tabularx}
 \end{table}
 
-\paragraph{（1）缺失值处理}
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.9\textwidth]{image/不同GRADE违约率.jpg} % <-- 替换为你的第二张图片路径
+    \caption{不同GRADE违约率}
+    \label{fig:违约率}
+\end{figure}
+如图\ref{fig:违约率}所示，不同信用等级（\texttt{grade}）的违约率存在显著差异，较低等级（如 \texttt{'1'}）的违约风险明显高于较高等级（如 \texttt{'6'}），这验证了信用评级在风险评估中的重要作用。\texttt{Grade}很有可能成为一个强特征。
 
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.9\textwidth]{image/子等级vs利率.jpg} % <-- 替换为你的第二张图片路径
+    \caption{子等级 vs 利率 的违约分布}
+    \label{fig:违约分布}
+\end{figure}
+如图\ref{fig:违约分布}我们可以发现，违约样本主要集中在右上角（等级高且利率高），说明这两个特征正如预期工作。
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.9\textwidth]{image/收入与贷款额.jpg} % <-- 替换为你的第二张图片路径
+    \caption{收入与贷款额的违约风险密度图}
+    \label{fig:收入与贷款额的违约风险密度图}
+\end{figure}
+如图\ref{fig:收入与贷款额的违约风险密度图}所示，低收入且高贷款额的借款人违约风险显著增加，这与债务收入比（\texttt{dti}）的风险评估逻辑一致。为后续特征工程提供了重要参考。
+
+\paragraph{（1）缺失值处理}
+对于缺失值的处理，通常有使用均值/中位数填充、插值法以及基于模型的预测填充等多种策略。但经过我们讨论研究后，发现在金融信贷领域，缺失值的出现可能本身就携带了一部分信息，我们采用了如下统一的填充方案：
 \begin{itemize}
   \item \textbf{数值型变量填充}：针对所有数值型特征（含匿名变量），采用固定值 \texttt{-999} 进行填充。此类极端值设计可被树模型有效识别为“缺失模式”的代理变量，便于建模捕捉其潜在信息。
   \item \textbf{分类变量填充}：对于类别变量，统一使用占位符\texttt{MISSING}进行填充。
 \end{itemize}
-
+于是，通过这样的处理，我们把“缺失”也作为一种信息纳入了模型的学习范畴。图 \ref{fig:missing_values} 展示了数据集中各特征缺失值的百分比分布情况，可以看出部分变量存在较高比例的缺失，提示这些变量在后续建模中可能具有重要作用。
 \begin{figure}[H]
     \centering
     \includegraphics[width=0.8\textwidth]{image/results/__results___files/__results___9_1.png} % <-- 替换为你的图片路径
@@ -174,7 +198,7 @@
     \]
     通过上述方法，特征 \texttt{homeOwnership}, \texttt{purpose}, \texttt{regionCode}, \texttt{postCode}, \texttt{employmentTitle}, \texttt{title} 等被转换为信息密集的数值特征，显著增强了模型的预测能力。
 \end{itemize}
-
+由于我们只采用了树模型进行建模，因此无需对数值特征进行归一化或标准化处理。\footnote{我们实验尝试过标准化处理数据后训练一个NN+focal loss来和我们的baseline融合，但实验证明效果并不好，我们也就删除了NN与标准化}
 \vspace{0.5em}
 综上，通过上述系统的预处理流程，原始数据集中的质量缺陷得以显著改善，最终构建出结构规范、数据完整、类型统一的高质量“干净数据集”。该数据基础不仅满足建模算法的输入要求，同时也为后续特征工程与模型迭代提供了可靠支撑。
 
@@ -280,6 +304,23 @@
 
 这些特征通过结合财务比率和信用行为，提供了清晰的业务逻辑，能够直接映射到风控决策流程中，满足金融领域的可解释性要求。
 
+\subsubsection{特征工程后的特征分析}
+
+\begin{figure}[]
+    \centering
+    \includegraphics[width=0.9\textwidth]{image/KDE分布与箱线图.jpg} % <-- 替换为你的第二张图片路径
+    \caption{KDE分布与箱线图}
+    \label{fig:kde}
+\end{figure}
+我们挑选了一些特征来可视化我们特征工程后的结果，如图\ref{fig:kde}所示，。从图中可以看出，不同类别的样本在这些特征上的分布存在显著差异，表明这些特征在区分违约与非违约样本方面具有较强的能力。
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.9\textwidth]{image/t-SNE图.jpg} % <-- 替换为你的第二张图片路径
+    \caption{t-SNE图}
+    \label{fig:sne}
+\end{figure}
+如图\ref{fig:sne}所示，我们使用t-SNE对特征进行降维可视化。可以看到，违约样本和非违约样本在二维空间中呈现出一定的混合，并且聚类成了五个簇，说明我们的特征工程提取了一些有用的信息，但仍有提升空间。另一个思路可能是，把这些簇的信息也作为一个特征输入模型，但是我们在本工作中并没有尝试这一点。
 \section{模型构建与优化}
 \label{sec:model_building}
 
